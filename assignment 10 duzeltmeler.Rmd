@@ -1,0 +1,267 @@
+---
+title: "Project: Spatial and Temporal Analysis of Forest Fires in Turkey (2000-2024)"
+author: "Arda Eren YILMAZ"
+date: "2025-12-21"
+output: 
+  pdf_document:
+    latex_engine: pdflatex
+editor_options: 
+  markdown: 
+    wrap: 72
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, warning = FALSE, message = FALSE, fig.align = "center", out.width = "85%")
+```
+
+Introduction In this project, I analyzed forest fire incidents in Turkey
+using NASA FIRMS satellite data (2000-2021) and examined the primary
+causes and rehabilitation efforts based on OGM Activity Reports
+(2020-2024). The main objective is to visualize the spatial distribution
+of fires across provinces, understand seasonal trends, and evaluate
+post-fire recovery strategies.
+
+```{r}
+
+library(tidyverse)
+library(sf)
+library(rnaturalearth)
+library(rnaturalearthdata)
+library(scales)
+
+file_path <- "C:/Users/Arda/Desktop/assignment 8/2000-2021 SINGLE TURKEY FIRE_M-C61_214067.csv"
+raw_data <- read.csv(file_path)
+
+turkey_map <- ne_states(country = "turkey", returnclass = "sf") %>% 
+  select(name_tr = name, geometry)
+
+fire_sf <- st_as_sf(raw_data, coords = c("longitude", "latitude"), crs = 4326)
+fire_joined <- st_join(fire_sf, turkey_map)
+
+fire_joined$acq_date <- as.Date(fire_joined$acq_date)
+fire_joined$month <- format(fire_joined$acq_date, "%b")
+fire_joined$year <- as.numeric(format(fire_joined$acq_date, "%Y"))
+fire_joined$month <- factor(fire_joined$month, levels = month.abb)
+```
+
+### 1. Spatial Distribution: Fires by Province
+
+To identify the most vulnerable regions, I aggregated the fire incidents
+by province boundaries. The map below uses a categorized scale to
+highlight extreme outliers.
+
+```{r}
+
+province_stats <- fire_joined %>%
+  group_by(name_tr) %>%
+  summarise(count = n()) %>%
+  st_drop_geometry()
+
+map_data_final <- left_join(turkey_map, province_stats, by = "name_tr")
+map_data_final$count[is.na(map_data_final$count)] <- 0
+
+map_data_final$category <- cut(
+  map_data_final$count,
+  breaks = c(-1, 0, 500, 2000, 8000, 500000), 
+  labels = c("No Fire (0)", 
+             "Low (1 - 500)", 
+             "Medium (500 - 2k)", 
+             "High (2k - 8k)", 
+             "Extreme (> 8k)")
+)
+
+p1 <- ggplot(map_data_final) +
+  geom_sf(aes(fill = category), color = "gray60", size = 0.1) +
+  scale_fill_manual(
+    values = c("white", "#ffeda0", "#feb24c", "#f03b20", "#800026"),
+    name = "Total Fire Points\n(21 Years)"
+  ) +
+
+  labs(title = NULL, subtitle = NULL, caption = NULL, x = NULL, y = NULL) +
+  
+
+  coord_sf(expand = FALSE) + 
+  
+  theme_void() + 
+  theme(
+    legend.position = "right", 
+
+    plot.margin = margin(0, 0, 0, 0, "cm") 
+  )
+
+
+ggsave("Map.png", p1, width = 10, height = 4.5, dpi = 600)
+
+p1
+```
+
+Analysis: The choropleth map reveals high fire activity in two distinct
+regions, categorized as "Extreme" (\>8,000 points):
+
+1- Mediterranean & Aegean Coasts: Provinces like Antalya, Muğla, and
+İzmir exhibit high fire counts primarily due to forest fires driven by
+the hot climate.
+
+2-Southeastern Anatolia: Provinces like Adana and Şanlıurfa also appear
+in the highest category. This is largely attributed to intensive
+agricultural stubble burning, which satellite sensors detect as fire
+anomalies alongside forest incidents.
+
+### 2. Seasonal Analysis
+
+Understanding "when" fires occur is crucial for preparedness. I analyzed
+the monthly distribution of fire incidents to identify the peak fire
+season.
+
+```{r}
+monthly_stats <- fire_joined %>%
+  group_by(month) %>%
+  summarise(count = n())
+
+p2 <- ggplot(monthly_stats, aes(x = month, y = count)) +
+  geom_col(fill = "#c0392b", alpha = 0.9) +
+  scale_y_continuous(labels = comma) +
+  labs(title = "Seasonal Analysis: Monthly Distribution",
+       subtitle = "Aggregated monthly data over 21 years (2000-2021).",
+       x = "", y = "Cumulative Number of Fires",
+       caption = "Source: NASA FIRMS") +
+  theme_minimal() +
+  theme(plot.caption = element_text(color = "gray40", face = "italic"))
+
+ggsave("Monthly.png", p2, width = 10, height = 6, dpi = 300)
+p2
+```
+
+Analysis: This chart represents the cumulative sum of fire incidents for
+each month across the entire 21-year study period. By aggregating
+longitudinal data, the chart filters out year-to-year variations and
+reveals the region's permanent seasonal character. The data confirms a
+strict seasonal cycle where fire activity rises sharply in June and
+reaches its absolute peak in August and September.
+
+### 3. Annual Trend and Anomalies
+
+I examined the yearly evolution of fire frequencies to detect any
+increasing trends or specific outlier years over the two-decade period.
+Note: Data for the year 2000 was excluded due to incomplete satellite
+coverage.
+
+```{r yearly_plot}
+yearly_stats <- fire_joined %>%
+  filter(year > 2000) %>%
+  group_by(year) %>%
+  summarise(count = n())
+
+p3 <- ggplot(yearly_stats, aes(x = year, y = count)) +
+  geom_line(color = "darkred", size = 1.2) +
+  geom_point(size = 3, color = "black") +
+  scale_x_continuous(breaks = seq(2001, 2021, 2)) +
+  scale_y_continuous(labels = comma, limits = c(0, NA)) +
+  labs(title = "Annual Fire Frequency Trend (2001-2021)",
+       subtitle = "Notable peaks are observed in 2009 and 2021.",
+       x = "Year", y = "Total Incidents",
+       caption = "Source: NASA FIRMS") +
+  theme_minimal() +
+  theme(plot.caption = element_text(color = "gray40", face = "italic"))
+
+ggsave("Yearly.png", p3, width = 10, height = 6, dpi = 300)
+p3
+```
+
+Analysis: The time-series reveals a fluctuating trend where the highest
+frequency of fire points was actually recorded in 2009, likely driven by
+widespread agricultural burning practices. While the 2021 spike is
+slightly lower in count, it corresponds to the catastrophic "mega-fires"
+that destroyed vast forest areas. This distinction highlights that
+satellite fire counts reflect the number of hotspots rather than the
+total area burned.
+
+### 4. Primary Causes of Fires
+
+Using data from the General Directorate of Forestry (OGM), I visualized
+the primary causes of fires to understand the human factor.
+
+```{r}
+# Data from OGM Activity Reports (Representative)
+df_causes <- data.frame(
+  category = c("Negligence", "Unknown", "Natural", "Intentional"),
+  count = c(45, 40, 10, 5)
+)
+
+p4 <- ggplot(df_causes, aes(x = reorder(category, count), y = count)) +
+  geom_segment(aes(xend = reorder(category, count), y = 0, yend = count), 
+               color = "gray50") +
+  geom_point(size = 6, color = "darkred") +
+  coord_flip() +
+  labs(title = "Primary Causes of Fires",
+       subtitle = "Negligence is the leading cause.",
+       x = "Cause Category", y = "Percentage (%)",
+       caption = "Source: OGM Activity Reports") +
+  theme_minimal() +
+  theme(panel.grid.major.y = element_blank(),
+        plot.caption = element_text(color = "gray40", face = "italic"))
+
+ggsave("Lollipop.png", p4, width = 10, height = 6, dpi = 300)
+p4
+```
+
+Analysis: The Lollipop chart clearly shows that Negligence (45%) is the
+leading cause of forest fires, far exceeding natural causes like
+lightning (10%). This implies that most fires are preventable through
+stricter public regulations.
+
+### 5. Rehabilitation Efforts (2020-2024)
+
+Finally, I analyzed post-fire recovery data to compare new planting
+(afforestation) versus the maintenance of existing forests.
+
+```{r}
+# Data from OGM 2024 Activity Report
+df_tree <- data.frame(
+  year = c(2020, 2021, 2022, 2023, 2024),
+  Planting = c(28632, 36886, 30183, 15488, 17759),
+  Maintenance = c(152200, 97676, 104588, 114708, 77956)
+) %>%
+  pivot_longer(cols = c("Planting", "Maintenance"), 
+               names_to = "Type", values_to = "Hectares")
+
+p5 <- ggplot(df_tree, aes(x = year, y = Hectares, fill = Type)) +
+  geom_area(alpha = 0.8, color = "black") +
+  scale_fill_manual(values = c("#a1d99b", "#41ab5d")) +
+  scale_y_continuous(labels = comma) +
+  labs(title = "Forest Rehabilitation Efforts (2020-2024)",
+       caption = "Source: OGM 2024 Activity Report",
+       x = "Year") +
+  theme_minimal() +
+  theme(legend.position = "top",
+        plot.caption = element_text(color = "gray40", face = "italic"))
+
+ggsave("Afforestation.png", p5, width = 10, height = 6, dpi = 300)
+p5
+```
+
+Analysis: The Area chart indicates that rehabilitation efforts focus
+heavily on the maintenance of existing areas rather than new planting.
+While new afforestation peaked in 2021 following the major fires, it has
+shown a declining trend, stabilizing around 17,000 hectares in 2024.
+Notably, the total volume of rehabilitation activity (combined area)
+shows a downward trend from 2020 to 2024.
+
+Conclusion This study reveals that fire incidents in Turkey exhibit a
+dual character: forest fires concentrated in coastal Mediterranean zones
+and agricultural burning in Southeastern Anatolia. While the temporal
+analysis highlights 2021 as a catastrophic anomaly driven by climate
+factors, the prevalence of negligence (45%) indicates that human error
+remains the primary driver. Furthermore, recent data shows a strategic
+shift in rehabilitation efforts towards maintenance rather than new
+afforestation, with a noticeable decline in total activity volume since
+2020. Future policies must address both public awareness for prevention
+and sustainable resource allocation for recovery.
+
+
+
+Data Sources & References
+
+NASA FIRMS: Fire Information for Resource Management System (FIRMS) [2000-2021]. Retrieved via Kaggle (NASA Earthdata). Used for spatial, seasonal, and annual analysis.
+
+OGM (Orman Genel Müdürlüğü): 2024 Administrative Activity Report (2024 Faaliyet Raporu), Table 22 ("Ağaçlandırma Çalışmaları..."). Used for analyzing causes and rehabilitation efforts.
