@@ -1,0 +1,67 @@
+# Spatial and Temporal Analysis of Forest Fires in Turkey (2000-2024)
+
+**Author:** Arda Eren YILMAZ  
+**Institution:** Eskişehir Technical University  
+**Date:** December 2025
+
+![Poster Preview](Poster.pdf) 
+*(Click to view the full high-resolution poster)*
+
+---
+
+## 📌 Project Overview
+In this project, I analyzed forest fire incidents in Turkey using **NASA FIRMS satellite data (2000-2021)** and examined the primary causes and rehabilitation efforts based on **OGM Activity Reports (2020-2024)**. 
+
+The main objectives are:
+1. To visualize the **spatial distribution** of fires across provinces.
+2. To understand **seasonal and annual trends**.
+3. To evaluate **post-fire recovery strategies** (Afforestation vs. Maintenance).
+
+---
+
+## 📊 Key Visualizations & Analysis
+
+### 1. Spatial Distribution (Map)
+This map visualizes the cumulative density of fire points over 21 years.
+![Map](Plots/Map.png)
+> **Insight:** > * **Coastal Zones (Extreme):** Antalya, Muğla, and İzmir show high activity due to the hot Mediterranean climate.
+> * **Southeastern Anatolia:** High activity in Adana and Şanlıurfa is attributed to **agricultural stubble burning** (anız yakma), which satellites detect as thermal anomalies.
+
+### 2. Seasonal Analysis
+Monthly distribution of fire incidents aggregated over 21 years.
+![Monthly](Plots/Monthly.png)
+> **Insight:** There is a strict seasonal cycle. Fire activity rises sharply in June and reaches its **absolute peak in August and September**.
+
+### 3. Annual Trend
+Yearly evolution of fire frequencies (2001-2021).
+![Yearly](Plots/Yearly.png)
+> **Insight:** > * **2009:** Highest frequency in count, likely due to agricultural practices.
+> * **2021:** A catastrophic "mega-fire" year driven by extreme weather. Although the count was lower than 2009, the ecological destruction was massive.
+
+### 4. Primary Causes
+Breakdown of fire causes based on OGM data.
+![Causes](Plots/Lollipop.png)
+> **Insight:** **Negligence (45%)** is the leading cause of forest fires, far exceeding natural causes like lightning (10%).
+
+### 5. Rehabilitation Efforts
+Post-fire recovery data (2020-2024).
+![Rehab](Plots/Afforestation.png)
+> **Insight:** Rehabilitation efforts focus heavily on the **maintenance** of existing forests rather than new planting. Total rehabilitation volume shows a declining trend since 2020.
+
+---
+
+## 📂 Repository Structure
+* `Code/`: Contains the R Markdown (`.Rmd`) file used for analysis.
+* `Data/`: Contains the raw CSV dataset.
+* `Plots/`: High-resolution images of the charts generated.
+* `Poster.pdf`: The final A1 vertical poster presented.
+
+---
+
+## 🔗 Data Sources
+1. **NASA FIRMS:** Fire Information for Resource Management System [2000-2021].
+2. **OGM:** Republic of Türkiye General Directorate of Forestry, 2024 Activity Report.
+
+---
+
+*This project was prepared for the Data Visualization course at Eskişehir Technical University.*
